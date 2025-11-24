@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/tomatome/grdp/core"
-	"github.com/tomatome/grdp/plugin"
-	"github.com/tomatome/grdp/protocol/nla"
-	"github.com/tomatome/grdp/protocol/pdu"
-	"github.com/tomatome/grdp/protocol/sec"
-	"github.com/tomatome/grdp/protocol/t125"
-	"github.com/tomatome/grdp/protocol/tpkt"
-	"github.com/tomatome/grdp/protocol/x224"
+	"github.com/dosgo/grdp/core"
+	"github.com/dosgo/grdp/plugin"
+	"github.com/dosgo/grdp/protocol/nla"
+	"github.com/dosgo/grdp/protocol/pdu"
+	"github.com/dosgo/grdp/protocol/sec"
+	"github.com/dosgo/grdp/protocol/t125"
+	"github.com/dosgo/grdp/protocol/tpkt"
+	"github.com/dosgo/grdp/protocol/x224"
 )
 
 type RdpClient struct {

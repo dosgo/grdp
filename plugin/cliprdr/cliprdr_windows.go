@@ -7,10 +7,10 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
+	"github.com/dosgo/grdp/glog"
 	"github.com/shirou/w32"
-	"github.com/tomatome/grdp/glog"
 
-	"github.com/tomatome/grdp/core"
+	"github.com/dosgo/grdp/core"
 
 	"github.com/tomatome/win"
 )

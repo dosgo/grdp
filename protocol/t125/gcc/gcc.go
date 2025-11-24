@@ -7,15 +7,16 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
+	"fmt"
 	"io"
 	"math/big"
 	"os"
 
-	"github.com/tomatome/grdp/glog"
-
+	"github.com/dosgo/grdp/core"
+	"github.com/dosgo/grdp/glog"
+	"github.com/dosgo/grdp/protocol/t125/per"
 	"github.com/lunixbochs/struc"
-	"github.com/tomatome/grdp/core"
-	"github.com/tomatome/grdp/protocol/t125/per"
+	"github.com/zmap/zcrypto/cryptobyte"
 )
 
 var t124_02_98_oid = []byte{0, 0, 20, 124, 0, 1}
@@ -407,13 +408,114 @@ type X509CertificateChain struct {
 	Padding       []byte     `struc:"[12]byte"`
 }
 
+func CustomParseCertificate(der []byte) (*x509.Certificate, error) {
+	cert := &x509.Certificate{}
+
+	input := cryptobyte.String(der)
+	// we read the SEQUENCE including length and tag bytes so that
+	// we can populate Certificate.Raw, before unwrapping the
+	// SEQUENCE so it can be operated on
+	if !input.ReadASN1Element(&input, 0x30) {
+		return nil, errors.New("x509: malformed certificate")
+	}
+	cert.Raw = input
+	if !input.ReadASN1(&input, 0x30) {
+		return nil, errors.New("x509: malformed certificate")
+	}
+
+	var tbs cryptobyte.String
+	// do the same trick again as above to extract the raw
+	// bytes for Certificate.RawTBSCertificate
+	if !input.ReadASN1Element(&tbs, 0x30) {
+		return nil, errors.New("x509: malformed tbs certificate")
+	}
+	cert.RawTBSCertificate = tbs
+	if !tbs.ReadASN1(&tbs, 0x30) {
+		return nil, errors.New("x509: malformed tbs certificate")
+	}
+	if !tbs.ReadOptionalASN1Integer(&cert.Version, 160, 0) {
+		return nil, errors.New("x509: malformed version")
+	}
+	if cert.Version < 0 {
+		return nil, errors.New("x509: malformed version")
+	}
+	// for backwards compat reasons Version is one-indexed,
+	// rather than zero-indexed as defined in 5280
+	cert.Version++
+	if cert.Version > 3 {
+		return nil, errors.New("x509: invalid version")
+	}
+
+	serial := new(big.Int)
+	if !tbs.ReadASN1Integer(serial) {
+		return nil, errors.New("x509: malformed serial number")
+	}
+
+	cert.SerialNumber = serial
+
+	var sigAISeq cryptobyte.String
+	if !tbs.ReadASN1(&sigAISeq, 0x30) {
+		return nil, errors.New("x509: malformed signature algorithm identifier")
+	}
+	// Before parsing the inner algorithm identifier, extract
+	// the outer algorithm identifier and make sure that they
+	// match.
+	var outerSigAISeq cryptobyte.String
+	if !input.ReadASN1(&outerSigAISeq, 0x30) {
+		return nil, errors.New("x509: malformed algorithm identifier")
+	}
+	if !bytes.Equal(outerSigAISeq, sigAISeq) {
+		return nil, errors.New("x509: inner and outer signature algorithm identifiers don't match")
+	}
+
+	var issuerSeq cryptobyte.String
+	if !tbs.ReadASN1Element(&issuerSeq, 0x30) {
+		return nil, errors.New("x509: malformed issuer")
+	}
+	cert.RawIssuer = issuerSeq
+
+	var validity cryptobyte.String
+	if !tbs.ReadASN1(&validity, 0x30) {
+		return nil, errors.New("x509: malformed validity")
+	}
+
+	var subjectSeq cryptobyte.String
+	if !tbs.ReadASN1Element(&subjectSeq, 0x30) {
+		return nil, errors.New("x509: malformed issuer")
+	}
+	cert.RawSubject = subjectSeq
+
+	var spki cryptobyte.String
+	if !tbs.ReadASN1Element(&spki, 0x30) {
+		return nil, errors.New("x509: malformed spki")
+	}
+	cert.RawSubjectPublicKeyInfo = spki
+	if !spki.ReadASN1(&spki, 0x30) {
+		return nil, errors.New("x509: malformed spki")
+	}
+	var pkAISeq cryptobyte.String
+	if !spki.ReadASN1(&pkAISeq, 0x30) {
+		return nil, errors.New("x509: malformed public key algorithm identifier")
+	}
+
+	return cert, nil
+}
+
 func (x *X509CertificateChain) GetPublicKey() (*rsa.PublicKey, error) {
 	data := x.CertBlobArray[len(x.CertBlobArray)-1].AbCert
+
 	cert, err := x509.ParseCertificate(data)
+	fmt.Printf("cert:%+v\r\n", cert)
 	if err != nil {
 		glog.Error("X509 ParseCertificate err:", err)
-		return nil, err
+		cert, err = CustomParseCertificate(data)
+		//return nil, err
+		if err != nil {
+			glog.Error("X509 CustomParseCertificate err:", err)
+			return nil, err
+		}
 	}
+
 	var rsaPublicKey *rsa.PublicKey
 	if cert.PublicKey == nil {
 		var pubKeyInfo struct {
@@ -422,14 +524,17 @@ func (x *X509CertificateChain) GetPublicKey() (*rsa.PublicKey, error) {
 		}
 		_, err = asn1.Unmarshal(cert.RawSubjectPublicKeyInfo, &pubKeyInfo)
 		if err != nil {
+			fmt.Printf("1111:%+v\r\n", err)
 			return nil, err
 		}
 		rsaPublicKey, err = x509.ParsePKCS1PublicKey(pubKeyInfo.SubjectPublicKey.Bytes)
 		if err != nil {
+			fmt.Printf("2222:%+v\r\n", err)
 			return nil, err
 		}
 	} else {
 		rsaPublicKey = cert.PublicKey.(*rsa.PublicKey)
+		fmt.Printf("ererwer\r\n")
 	}
 
 	return rsaPublicKey, nil

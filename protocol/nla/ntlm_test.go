@@ -5,8 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/dosgo/grdp/protocol/nla"
 	"github.com/lunixbochs/struc"
-	"github.com/tomatome/grdp/protocol/nla"
 )
 
 func TestNewNegotiateMessage(t *testing.T) {

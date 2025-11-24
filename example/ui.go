@@ -12,11 +12,11 @@ import (
 
 	"github.com/google/gxui/drivers/gl"
 
+	"github.com/dosgo/grdp/core"
+	"github.com/dosgo/grdp/glog"
 	"github.com/google/gxui"
 	"github.com/google/gxui/samples/flags"
 	"github.com/google/gxui/themes/light"
-	"github.com/tomatome/grdp/core"
-	"github.com/tomatome/grdp/glog"
 )
 
 var (

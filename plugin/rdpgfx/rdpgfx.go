@@ -3,9 +3,9 @@ package rdpgfx
 import (
 	"encoding/hex"
 
-	"github.com/tomatome/grdp/core"
-	"github.com/tomatome/grdp/glog"
-	"github.com/tomatome/grdp/plugin"
+	"github.com/dosgo/grdp/core"
+	"github.com/dosgo/grdp/glog"
+	"github.com/dosgo/grdp/plugin"
 )
 
 const (
