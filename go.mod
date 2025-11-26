@@ -4,12 +4,11 @@ go 1.24.0
 
 require (
 	github.com/google/gxui v0.0.0-20151028112939-f85e0a97b3a4
-	github.com/googollee/go-socket.io v1.6.2
+	github.com/googollee/go-socket.io v1.7.0
 	github.com/huin/asn1ber v0.0.0-20120622192748-af09f62e6358
 	github.com/icodeface/tls v0.0.0-20190904083142-17aec93c60e5
 	github.com/lunixbochs/struc v0.0.0-20200707160740-784aaebc1d40
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
-	github.com/tomatome/grdp v0.1.0
 	github.com/tomatome/win v0.3.1
 	github.com/zmap/zcrypto v0.0.0-20251114214934-bb32b590b717
 	golang.org/x/crypto v0.43.0
@@ -25,9 +24,6 @@ require (
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/goxjs/gl v0.0.0-20210104184919-e3fafc6f8f2a // indirect
 	github.com/goxjs/glfw v0.0.0-20220119044647-4bcee99381f2 // indirect
-	github.com/weppos/publicsuffix-go v0.50.1-0.20251112144109-bba082b5c27e // indirect
 	golang.org/x/image v0.0.0-20220617043117-41969df76e82 // indirect
-	golang.org/x/net v0.46.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
 	honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2 // indirect
 )

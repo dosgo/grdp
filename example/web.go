@@ -10,9 +10,10 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/dosgo/grdp/glog"
+	"github.com/dosgo/grdp/protocol/pdu"
 	socketio "github.com/googollee/go-socket.io"
-	"github.com/tomatome/grdp/glog"
-	"github.com/tomatome/grdp/protocol/pdu"
+	"github.com/gorilla/websocket"
 )
 
 func showPreview(w http.ResponseWriter, r *http.Request) {
@@ -27,10 +28,11 @@ func showPreview(w http.ResponseWriter, r *http.Request) {
 }
 
 func socketIO() {
-	server, _ := socketio.NewServer(nil)
+	server := socketio.NewServer(nil)
 	server.OnConnect("/", func(so socketio.Conn) error {
 		fmt.Println("OnConnect", so.ID())
-		so.Emit("rdp-connect", true)
+		//so.Emit("rdp-connect", true)
+		//fmt.Println("OnConnect111", so.ID())
 		return nil
 	})
 	server.OnEvent("/", "infos", func(so socketio.Conn, data interface{}) {
@@ -179,4 +181,222 @@ func socketIO() {
 
 	log.Println("Serving at localhost:8088...")
 	log.Fatal(http.ListenAndServe(":8088", nil))
+}
+
+var upgrader = websocket.Upgrader{
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+func wsIO() {
+
+	http.HandleFunc("/ws", handleConnections)
+
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.Handle("/css/", http.FileServer(http.Dir("static")))
+	http.Handle("/js/", http.FileServer(http.Dir("static")))
+	http.Handle("/img/", http.FileServer(http.Dir("static")))
+	http.HandleFunc("/", showPreview)
+
+	log.Println("Serving at localhost:8088...")
+	log.Fatal(http.ListenAndServe(":8088", nil))
+}
+
+func handleConnections(w http.ResponseWriter, r *http.Request) {
+
+	type Message struct {
+		Cmd  string `json:"cmd"`
+		Data string `json:"data"`
+	}
+
+	type MouseInfo struct {
+		X         uint16 `json:"x"`
+		Y         uint16 `json:"y"`
+		Button    uint16 `json:"button"`
+		IsPressed bool   `json:"isPressed"`
+	}
+
+	type KeyboardInfo struct {
+		Button    uint16 `json:"button"`
+		IsPressed bool   `json:"isPressed"`
+	}
+
+	type WheelInfo struct {
+		X            uint16 `json:"x"`
+		Y            uint16 `json:"y"`
+		Step         uint16 `json:"step"`
+		IsNegative   bool   `json:"isNegative"`
+		IsHorizontal bool   `json:"isHorizontal"`
+	}
+
+	// 升级HTTP连接到WebSocket
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("WebSocket升级失败: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	// 发送欢迎消息
+	connectMsg := Message{
+		Cmd: "rdp-connect",
+	}
+	conn.WriteJSON(connectMsg)
+
+	// 读取客户端消息
+	var recvMsg Message
+	var g *RdpClient
+	for {
+
+		err := conn.ReadJSON(&recvMsg)
+		if err != nil {
+
+			break
+		}
+
+		// 获取连接
+		if recvMsg.Cmd == "infos" {
+
+			fmt.Println("infos", r.RemoteAddr)
+			var info Info
+			json.Unmarshal([]byte(recvMsg.Data), &info)
+			fmt.Println(r.RemoteAddr, "logon infos:", info)
+
+			g = NewRdpClient(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Width, info.Height, glog.INFO)
+			g.info = &info
+			err := g.Login()
+			if err != nil {
+				fmt.Println("Login:", err)
+				conn.WriteJSON(Message{
+					Cmd:  "rdp-error",
+					Data: "{\"code\":1,\"message\":\"" + err.Error() + "\"}",
+				})
+				return
+			}
+			g.pdu.On("error", func(e error) {
+				fmt.Println("on error:", e)
+				//so.Emit("rdp-error", "{\"code\":1,\"message\":\""+e.Error()+"\"}")
+				conn.WriteJSON(Message{
+					Cmd:  "rdp-error",
+					Data: "{\"code\":1,\"message\":\"" + e.Error() + "\"}",
+				})
+				//wg.Done()
+			}).On("close", func() {
+				err = errors.New("close")
+				fmt.Println("on close")
+			}).On("success", func() {
+				fmt.Println("on success")
+			}).On("ready", func() {
+				fmt.Println("on ready")
+			}).On("bitmap", func(rectangles []pdu.BitmapData) {
+				glog.Info(time.Now(), "on update Bitmap:", len(rectangles))
+				bs := make([]Bitmap, 0, len(rectangles))
+				for _, v := range rectangles {
+					IsCompress := v.IsCompress()
+					data := v.BitmapDataStream
+					glog.Debug("data:", data)
+					if IsCompress {
+						//data = decompress(&v)
+						//IsCompress = false
+					}
+
+					glog.Debug(IsCompress, v.BitsPerPixel)
+					b := Bitmap{int(v.DestLeft), int(v.DestTop), int(v.DestRight), int(v.DestBottom),
+						int(v.Width), int(v.Height), int(v.BitsPerPixel), IsCompress, data}
+					//so.Emit("rdp-bitmap", []Bitmap{b})
+					data, err := json.Marshal([]Bitmap{b})
+					if err == nil {
+						conn.WriteJSON(Message{
+							Cmd:  "rdp-bitmap",
+							Data: string(data),
+						})
+					}
+					bs = append(bs, b)
+				}
+				//so.Emit("rdp-bitmap", bs)
+				data, err := json.Marshal(bs)
+				if err == nil {
+					conn.WriteJSON(Message{
+						Cmd:  "rdp-bitmap",
+						Data: string(data),
+					})
+				}
+			})
+		}
+
+		// 获取连接
+		if recvMsg.Cmd == "mouse" {
+
+			var info MouseInfo
+
+			json.Unmarshal([]byte(recvMsg.Data), &info)
+
+			glog.Info("mouse", info.X, ":", info.Y, ":", info.Button, ":", info.IsPressed)
+			p := &pdu.PointerEvent{}
+			if info.IsPressed {
+				p.PointerFlags |= pdu.PTRFLAGS_DOWN
+			}
+
+			switch info.Button {
+			case 1:
+				p.PointerFlags |= pdu.PTRFLAGS_BUTTON1
+			case 2:
+				p.PointerFlags |= pdu.PTRFLAGS_BUTTON2
+			case 3:
+				p.PointerFlags |= pdu.PTRFLAGS_BUTTON3
+			default:
+				p.PointerFlags |= pdu.PTRFLAGS_MOVE
+			}
+
+			p.XPos = info.X
+			p.YPos = info.Y
+			if g != nil {
+				g.pdu.SendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
+			}
+		}
+		//keyboard
+		if recvMsg.Cmd == "scancode" {
+			var info KeyboardInfo
+			json.Unmarshal([]byte(recvMsg.Data), &info)
+
+			glog.Info("scancode:", "button:", info.Button, "isPressed:", info.IsPressed)
+
+			p := &pdu.ScancodeKeyEvent{}
+			p.KeyCode = info.Button
+			if !info.IsPressed {
+				p.KeyboardFlags |= pdu.KBDFLAGS_RELEASE
+			}
+			if g != nil {
+				g.pdu.SendInputEvents(pdu.INPUT_EVENT_SCANCODE, []pdu.InputEventsInterface{p})
+			}
+		}
+		//wheel
+		if recvMsg.Cmd == "wheel" {
+			var info WheelInfo
+			json.Unmarshal([]byte(recvMsg.Data), &info)
+			glog.Info("wheel", info.X, ":", info.Y, ":", info.Step, ":", info.IsNegative, ":", info.IsHorizontal)
+			var p = &pdu.PointerEvent{}
+			if info.IsHorizontal {
+				p.PointerFlags |= pdu.PTRFLAGS_HWHEEL
+			} else {
+				p.PointerFlags |= pdu.PTRFLAGS_WHEEL
+			}
+
+			if info.IsNegative {
+				p.PointerFlags |= pdu.PTRFLAGS_WHEEL_NEGATIVE
+			}
+
+			p.PointerFlags |= uint16(info.Step & pdu.WheelRotationMask)
+			p.XPos = info.X
+			p.YPos = info.Y
+			if g != nil {
+				g.pdu.SendInputEvents(pdu.INPUT_EVENT_SCANCODE, []pdu.InputEventsInterface{p})
+			}
+		}
+
+	}
+	if g != nil {
+
+		g.tpkt.Close()
+
+	}
 }

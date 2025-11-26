@@ -23,13 +23,13 @@ func init() {
 }
 
 func main() {
-	flag.BoolVar(&server, "s", false, "web server")
+	flag.BoolVar(&server, "s", true, "web server")
 	flag.Parse()
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	//web example
 	if server {
-		socketIO()
+		wsIO()
 	} else {
 		//client example
 		StartUI(1520, 1080)

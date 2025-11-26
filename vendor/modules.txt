@@ -37,7 +37,7 @@ github.com/google/gxui/samples/flags
 github.com/google/gxui/themes/basic
 github.com/google/gxui/themes/dark
 github.com/google/gxui/themes/light
-# github.com/googollee/go-socket.io v1.6.2
+# github.com/googollee/go-socket.io v1.7.0
 ## explicit; go 1.16
 github.com/googollee/go-socket.io
 github.com/googollee/go-socket.io/engineio
@@ -82,21 +82,9 @@ github.com/lunixbochs/struc
 # github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4
 ## explicit
 github.com/shirou/w32
-# github.com/tomatome/grdp v0.1.0
-## explicit; go 1.18
-github.com/tomatome/grdp/core
-github.com/tomatome/grdp/emission
-github.com/tomatome/grdp/glog
-github.com/tomatome/grdp/plugin
-github.com/tomatome/grdp/protocol/pdu
-github.com/tomatome/grdp/protocol/rfb
-github.com/tomatome/grdp/protocol/t125/gcc
-github.com/tomatome/grdp/protocol/t125/per
 # github.com/tomatome/win v0.3.1
 ## explicit
 github.com/tomatome/win
-# github.com/weppos/publicsuffix-go v0.50.1-0.20251112144109-bba082b5c27e
-## explicit; go 1.24.0
 # github.com/zmap/zcrypto v0.0.0-20251114214934-bb32b590b717
 ## explicit; go 1.24.0
 github.com/zmap/zcrypto/cryptobyte
@@ -109,10 +97,6 @@ golang.org/x/crypto/md4
 ## explicit; go 1.12
 golang.org/x/image/font
 golang.org/x/image/math/fixed
-# golang.org/x/net v0.46.0
-## explicit; go 1.24.0
-# golang.org/x/text v0.30.0
-## explicit; go 1.24.0
 # honnef.co/go/js/dom v0.0.0-20210725211120-f030747120f2
 ## explicit
 honnef.co/go/js/dom
