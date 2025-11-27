@@ -105,6 +105,21 @@
 			var imageData = this.ctx.getImageData(bitmap.destLeft, bitmap.destTop,output.width, output.height);
 			imageData.data.set(output.data);
 			this.ctx.putImageData(imageData, bitmap.destLeft, bitmap.destTop);
+		},
+		scrBltOrder:function(scrBltOrder){
+		
+			if (scrBltOrder.Cx <= 0 || scrBltOrder.Cy <= 0) {
+				console.error('Invalid dimensions for ScrBltOrder');
+				return;
+			}
+		
+			// 使用drawImage复制屏幕区域
+			this.ctx.drawImage(
+				this.canvas,
+				scrBltOrder.Srcx, scrBltOrder.Srcy, scrBltOrder.Cx, scrBltOrder.Cy,
+				scrBltOrder.X, scrBltOrder.Y, scrBltOrder.Cx, scrBltOrder.Cy
+			);
+	
 		}
 	}
 	

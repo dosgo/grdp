@@ -208,11 +208,11 @@
 				}
 				if(self.ws){
 					var param={
-							x :  e.clientX - offset.left, 
-							y :  e.clientY - offset.top, 
-							step :step, 
-							isNegative : delta > 0, 
-							isHorizontal:isHorizontal,
+						x :  e.clientX - offset.left, 
+						y :  e.clientY - offset.top, 
+						step :step, 
+						isNegative : delta > 0, 
+						isHorizontal:isHorizontal,
 			
 					}	
                	 	self.ws.send(JSON.stringify({
@@ -255,12 +255,16 @@
 			window.addEventListener('keydown', function (e) {
 				if ( !self.activeSession) return;
 				console.log("keydown");
+				var keyCode=Mstsc.scancode(e);
+				if(keyCode==0){
+					return;
+				}
 				if(self.socket){
-					self.socket.emit('scancode', Mstsc.scancode(e), true);
+					self.socket.emit('scancode',keyCode, true);
 				}
 				if(self.ws){
 					var param={
-						button :  Mstsc.scancode(e), 
+						button : keyCode, 
 						isPressed : true, 
 					}	
                	 	self.ws.send(JSON.stringify({
@@ -301,7 +305,7 @@
 		 * @param password {string} session password
 		 * @param next {function} asynchrone end callback
 		 */
-		connect1 : function (ip, port, domain, username, password, next) {
+		connectSocketIo: function (ip, port, domain, username, password, next) {
 			// compute socket.io path (cozy cloud integration)
 			var parts = document.location.pathname.split('/')
 		      , base = parts.slice(0, parts.length - 1).join('/') + '/'
@@ -396,8 +400,6 @@
 					self.activeSession = true;
 				}
 				if(msg.cmd=="rdp-bitmap"){
-
-				
   					var bitmaps = JSON.parse(msg.data);
 					for (var i in bitmaps)
 					{ 
@@ -408,6 +410,26 @@
 						self.render.update(bitmap);
 					}
 				}
+				if(msg.cmd=="rdp-orders"){
+					//console.log('[mstsc.js] orders'+msg.data);
+  					var orderPdus = JSON.parse(msg.data);
+					for (var i in orderPdus)
+					{ 
+						var orderPdu = orderPdus[i];
+						//console.log('[mstsc.js] orderPdu',orderPdu);
+					
+						if(orderPdu.ControlFlags==1){
+							console.log('[mstsc.js] orderPdu',orderPdu);
+							//alert("json:"+JSON.stringify(orderPdu));
+							if(orderPdu.Primary.Data.Opcode==204){ // ORDER_TYPE_MEMBLT
+								//alert("memblt:"+JSON.stringify(orderPdu.Primary.Data));
+								self.render.scrBltOrder(orderPdu.Primary.Data);
+							}
+						}
+						
+					}
+				}
+				
 				if(msg.cmd=="rdp-close"){
 					next(null);
 					console.log('[mstsc.js] close');

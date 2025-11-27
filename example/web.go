@@ -140,7 +140,7 @@ func socketIO() {
 		p.XPos = x
 		p.YPos = y
 		g := so.Context().(*RdpClient)
-		g.pdu.SendInputEvents(pdu.INPUT_EVENT_SCANCODE, []pdu.InputEventsInterface{p})
+		g.pdu.SendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
 	})
 
 	server.OnError("/", func(so socketio.Conn, err error) {
@@ -287,29 +287,52 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				fmt.Println("on success")
 			}).On("ready", func() {
 				fmt.Println("on ready")
+			}).On("color", func(fastPathColorPdu *pdu.FastPathColorPdu) {
+
+				fmt.Printf("color v:%+v\r\n", fastPathColorPdu)
+
+			}).On("orders", func(orderPdus []pdu.OrderPdu) {
+				isSend := false
+				for _, v := range orderPdus {
+					if v.Type == 0 {
+						isSend = true
+					}
+					if v.Primary != nil {
+
+						//	fmt.Printf("orders  v Primary type:%d data:%+v\r\n", v.Primary.Data.Type(), v.Primary.Data)
+
+					}
+
+				}
+				if isSend {
+					data, err := json.Marshal(orderPdus)
+					if err == nil {
+						conn.WriteJSON(Message{
+							Cmd:  "rdp-orders",
+							Data: string(data),
+						})
+					}
+				}
+
 			}).On("bitmap", func(rectangles []pdu.BitmapData) {
-				glog.Info(time.Now(), "on update Bitmap:", len(rectangles))
+				//glog.Info(time.Now(), "on update Bitmap:", len(rectangles))
 				bs := make([]Bitmap, 0, len(rectangles))
 				for _, v := range rectangles {
 					IsCompress := v.IsCompress()
 					data := v.BitmapDataStream
-					glog.Debug("data:", data)
-					if IsCompress {
-						//data = decompress(&v)
-						//IsCompress = false
-					}
 
 					glog.Debug(IsCompress, v.BitsPerPixel)
 					b := Bitmap{int(v.DestLeft), int(v.DestTop), int(v.DestRight), int(v.DestBottom),
 						int(v.Width), int(v.Height), int(v.BitsPerPixel), IsCompress, data}
 					//so.Emit("rdp-bitmap", []Bitmap{b})
-					data, err := json.Marshal([]Bitmap{b})
-					if err == nil {
-						conn.WriteJSON(Message{
-							Cmd:  "rdp-bitmap",
-							Data: string(data),
-						})
-					}
+					/*
+						data, err := json.Marshal([]Bitmap{b})
+						if err == nil {
+							conn.WriteJSON(Message{
+								Cmd:  "rdp-bitmap",
+								Data: string(data),
+							})
+						}*/
 					bs = append(bs, b)
 				}
 				//so.Emit("rdp-bitmap", bs)
@@ -357,7 +380,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 		if recvMsg.Cmd == "scancode" {
 			var info KeyboardInfo
 			json.Unmarshal([]byte(recvMsg.Data), &info)
-
+			if info.Button == 0 {
+				continue
+			}
 			glog.Info("scancode:", "button:", info.Button, "isPressed:", info.IsPressed)
 
 			p := &pdu.ScancodeKeyEvent{}
@@ -385,12 +410,13 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				p.PointerFlags |= pdu.PTRFLAGS_WHEEL_NEGATIVE
 			}
 
-			p.PointerFlags |= uint16(info.Step & pdu.WheelRotationMask)
+			p.PointerFlags |= info.Step & pdu.WheelRotationMask
 			p.XPos = info.X
 			p.YPos = info.Y
 			if g != nil {
-				g.pdu.SendInputEvents(pdu.INPUT_EVENT_SCANCODE, []pdu.InputEventsInterface{p})
+				g.pdu.SendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
 			}
+
 		}
 
 	}
