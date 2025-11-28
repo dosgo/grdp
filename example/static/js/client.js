@@ -119,10 +119,25 @@
 			var self = this;
 			// bind mouse move event
 			this.canvas.addEventListener('mousemove', function (e) {
-				if (!self.socket) return;
+			//	if (!self.socket) return;
 				console.log("mousemove");
 				var offset = Mstsc.elementOffset(self.canvas);
 				//self.socket.emit('mouse', e.clientX - offset.left, e.clientY - offset.top, 0, false);
+
+				if(self.ws){
+					var param={
+							x :  e.clientX - offset.left, 
+							y :  e.clientY - offset.top, 
+							button :0, 
+							isPressed : false, 
+			
+					}	
+               	 	self.ws.send(JSON.stringify({
+						cmd: "mouse",
+						data:JSON.stringify(param)
+                	}));	
+				}
+
 				e.preventDefault || !self.activeSession();
 				return false;
 			});
@@ -405,9 +420,10 @@
 					{ 
 						var bitmap = bitmaps[i];
 						bitmap["data"] = parse(bitmaps[i].data)
-						console.log(bitmap);
-						console.log('[mstsc.js] bitmap update:' + bitmap.bitsPerPixel);
-						self.render.update(bitmap);
+						console.log('[mstsc.js] bitmap',bitmap);
+						//console.log('[mstsc.js] bitmap update:' + bitmap.bitsPerPixel);
+						//self.render.update(bitmap);
+						self.render.pushUpdate('bitmap', bitmap);
 					}
 				}
 				if(msg.cmd=="rdp-orders"){
@@ -422,8 +438,7 @@
 							console.log('[mstsc.js] orderPdu',orderPdu);
 							//alert("json:"+JSON.stringify(orderPdu));
 							if(orderPdu.Primary.Data.Opcode==204){ // ORDER_TYPE_MEMBLT
-								//alert("memblt:"+JSON.stringify(orderPdu.Primary.Data));
-								self.render.scrBltOrder(orderPdu.Primary.Data);
+								self.render.pushUpdate('scrblt', orderPdu.Primary.Data);
 							}
 						}
 						

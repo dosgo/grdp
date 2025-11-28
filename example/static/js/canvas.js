@@ -82,6 +82,12 @@
 	function Canvas(canvas) {
 		this.canvas = canvas;
 		this.ctx = canvas.getContext("2d");
+		// 1. 存储待处理更新的队列
+        this.updateQueue = [];
+        // 2. 标记是否已经请求了下一帧
+        this.isRAFScheduled = false;
+		this.render = this.render.bind(this);
+		this.count=1;
 	}
 	
 	Canvas.prototype = {
@@ -97,29 +103,104 @@
 			else {
 				output = reverse(bitmap);
 			}
-			console.log(bitmap);
-			console.log("-------------");
-			console.log(output);
+			//console.log(bitmap);
+			//console.log("-------------");
+			//console.log(output);
 			// use image data to use asm.js
 			//var imageData = this.ctx.createImageData(output.width, output.height);
 			var imageData = this.ctx.getImageData(bitmap.destLeft, bitmap.destTop,output.width, output.height);
 			imageData.data.set(output.data);
 			this.ctx.putImageData(imageData, bitmap.destLeft, bitmap.destTop);
+
+			if(this.count>3000){
+				/*
+				const randomColor = getRandomColor();
+				this.ctx.strokeStyle = randomColor; // 红色边框
+				this.ctx.lineWidth = 2;       // 2像素粗
+				this.ctx.setLineDash([5, 5]); // 虚线
+
+				// 绘制目标矩形 (DestRect)
+				// 目标坐标：(X, Y)
+				// 目标尺寸：(Cx, Cy)
+				this.ctx.strokeRect(bitmap.destLeft, bitmap.destTop,output.width, output.height); 
+				*/
+			}
+			this.count++;
+
 		},
 		scrBltOrder:function(scrBltOrder){
-		
 			if (scrBltOrder.Cx <= 0 || scrBltOrder.Cy <= 0) {
 				console.error('Invalid dimensions for ScrBltOrder');
 				return;
 			}
-		
 			// 使用drawImage复制屏幕区域
+			/*
 			this.ctx.drawImage(
 				this.canvas,
 				scrBltOrder.Srcx, scrBltOrder.Srcy, scrBltOrder.Cx, scrBltOrder.Cy,
 				scrBltOrder.X, scrBltOrder.Y, scrBltOrder.Cx, scrBltOrder.Cy
+			);*/
+			
+
+
+			// 2. [调试代码] 添加边框，可视化目标区域 (DestRect)
+			/*
+			this.ctx.strokeStyle = 'red'; // 红色边框
+			this.ctx.lineWidth = 2;       // 2像素粗
+			this.ctx.setLineDash([5, 5]); // 虚线
+
+			// 绘制目标矩形 (DestRect)
+			// 目标坐标：(X, Y)
+			// 目标尺寸：(Cx, Cy)
+			this.ctx.strokeRect(scrBltOrder.X, scrBltOrder.Y, scrBltOrder.Cx,  scrBltOrder.Cy); 
+			*/
+			
+			// 绘制源矩形 (SrcRect) - 可选，用于对比
+		//	this.ctx.strokeStyle = 'blue';
+		//	this.ctx.setLineDash([2, 4]); 
+		//	this.ctx.strokeRect(scrBltOrder.Srcx, scrBltOrder.Srcy, scrBltOrder.Cx, scrBltOrder.Cy);
+			
+			const imageData = this.ctx.getImageData(
+				scrBltOrder.Srcx, scrBltOrder.Srcy, 
+				scrBltOrder.Cx, scrBltOrder.Cy
 			);
-	
+			this.ctx.putImageData(
+				imageData, 
+				scrBltOrder.X, scrBltOrder.Y
+			);
+		},
+		render() {
+			// 1. 标记 rAF 已执行，允许再次调度
+			this.isRAFScheduled = false; 
+			
+			// 2. 取出并清空当前所有待处理的更新
+			const updates = this.updateQueue;
+			this.updateQueue = [];
+			// 3. 批量执行所有更新
+			for (const update of updates) {
+				switch (update.type) {
+					case 'scrblt':
+						this.scrBltOrder(update.data);
+						break;
+					case 'bitmap':
+						this.update(update.data);
+						break;
+				}
+			}
+    	},
+		scheduleRender() {
+			if (!this.isRAFScheduled) {
+				// 确保只调用一次 requestAnimationFrame
+				requestAnimationFrame(this.render);
+				this.isRAFScheduled = true;
+			}
+    	},
+		pushUpdate(type, bitmapData) {
+			this.updateQueue.push({
+				type: type,
+				data: bitmapData
+			});
+			this.scheduleRender();
 		}
 	}
 	
@@ -132,3 +213,9 @@
 		}
 	}
 })();
+function getRandomColor() {
+    // Math.random().toString(16) 将随机数转换为十六进制字符串
+    // slice(2, 8) 截取小数点后的 6 位字符 (RRGGBB)
+    // padStart(6, '0') 确保颜色代码是完整的 6 位
+    return '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+}
