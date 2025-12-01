@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"image"
 	"image/color"
@@ -12,8 +13,11 @@ import (
 
 	"github.com/google/gxui/drivers/gl"
 
+	"github.com/dosgo/grdp/client"
 	"github.com/dosgo/grdp/core"
 	"github.com/dosgo/grdp/glog"
+	"github.com/dosgo/grdp/plugin/cliprdr"
+	"github.com/dosgo/grdp/protocol/pdu"
 	"github.com/google/gxui"
 	"github.com/google/gxui/samples/flags"
 	"github.com/google/gxui/themes/light"
@@ -271,7 +275,6 @@ func Hex2Dec(val string) int {
 
 type Control interface {
 	Login() error
-	SetRequestedProtocol(p uint32)
 	KeyUp(sc int, name string)
 	KeyDown(sc int, name string)
 	MouseMove(x, y int)
@@ -394,4 +397,61 @@ func transKey(in gxui.KeyboardKey) int {
 		return v
 	}
 	return 0
+}
+
+func uiRdp(info *Info) (error, *client.Client) {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+
+	BitmapCH = make(chan []Bitmap, 500)
+	conf := &client.Setting{
+		Width:    info.Width,
+		Height:   info.Height,
+		LogLevel: glog.INFO,
+	}
+	g := client.NewClient(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Username, info.Passwd, 0, conf)
+	g.SetLoginParam(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Username, info.Passwd)
+
+	err := g.Login()
+	if err != nil {
+		glog.Error("Login:", err)
+		return err, nil
+	}
+	cc := cliprdr.NewCliprdrClient()
+	g.RdpChannelsRegister(cc)
+
+	g.OnError(func(e error) {
+		glog.Info("on error:", e)
+	})
+
+	g.OnClose(func() {
+		err = errors.New("close")
+		glog.Info("on close")
+	})
+
+	g.OnSuccess(func() {
+		glog.Info("on success")
+	})
+	g.OnReady(func() {
+		glog.Info("on ready")
+	})
+	g.RdpOnBitmap(func(rectangles []pdu.BitmapData) {
+		glog.Info("Update Bitmap:", len(rectangles))
+		bs := make([]Bitmap, 0, 50)
+		for _, v := range rectangles {
+			IsCompress := v.IsCompress()
+			data := v.BitmapDataStream
+			if IsCompress {
+				//data = client.BitmapDecompress(&v)
+				data = core.Decompress(v.BitmapDataStream, int(v.Width), int(v.Height), Bpp(v.BitsPerPixel))
+				IsCompress = false
+			}
+
+			b := Bitmap{int(v.DestLeft), int(v.DestTop), int(v.DestRight), int(v.DestBottom),
+				int(v.Width), int(v.Height), Bpp(v.BitsPerPixel), IsCompress, data}
+			bs = append(bs, b)
+		}
+		ui_paint_bitmap(bs)
+	})
+
+	return nil, g
 }

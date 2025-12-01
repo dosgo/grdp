@@ -71,9 +71,6 @@ func (c *RdpClient) Login(host, user, pwd string, width, height int) error {
 	c.sec.SetChannelSender(c.mcs)
 	c.channels.SetChannelSender(c.sec)
 
-	//c.x224.SetRequestedProtocol(x224.PROTOCOL_RDP)
-	//c.x224.SetRequestedProtocol(x224.PROTOCOL_SSL)
-
 	err = c.x224.Connect()
 	if err != nil {
 		return fmt.Errorf("[x224 connect err] %v", err)

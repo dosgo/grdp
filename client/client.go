@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/dosgo/grdp/glog"
+	"github.com/dosgo/grdp/plugin"
 	"github.com/dosgo/grdp/protocol/pdu"
 	"github.com/dosgo/grdp/protocol/rfb"
 )
@@ -162,6 +163,12 @@ func (c *Client) RdpOnOrder(f func([]pdu.OrderPdu)) {
 func (c *Client) RdpSendInputEvents(msgType uint16, events []pdu.InputEventsInterface) {
 	if rdpClient, ok := c.ctl.(*RdpClient); ok {
 		rdpClient.pdu.SendInputEvents(msgType, events)
+	}
+}
+
+func (c *Client) RdpChannelsRegister(t plugin.ChannelTransport) {
+	if rdpClient, ok := c.ctl.(*RdpClient); ok {
+		rdpClient.channels.Register(t)
 	}
 }
 
