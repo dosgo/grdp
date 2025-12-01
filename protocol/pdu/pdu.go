@@ -202,9 +202,9 @@ func (c *Client) sendConfirmActivePDU() {
 	orderCapa := c.clientCapabilities[CAPSTYPE_ORDER].(*OrderCapability)
 	orderCapa.OrderFlags = NEGOTIATEORDERSUPPORT | ZEROBOUNDSDELTASSUPPORT | COLORINDEXSUPPORT | ORDERFLAGS_EXTRA_FLAGS
 	orderCapa.OrderSupportExFlags |= ORDERFLAGS_EX_ALTSEC_FRAME_MARKER_SUPPORT
-	orderCapa.OrderSupport[TS_NEG_DSTBLT_INDEX] = 1
-	orderCapa.OrderSupport[TS_NEG_PATBLT_INDEX] = 1
-	orderCapa.OrderSupport[TS_NEG_SCRBLT_INDEX] = 1
+	orderCapa.OrderSupport[TS_NEG_DSTBLT_INDEX] = 0
+	orderCapa.OrderSupport[TS_NEG_PATBLT_INDEX] = 0
+	orderCapa.OrderSupport[TS_NEG_SCRBLT_INDEX] = 0
 	//orderCapa.OrderSupport[TS_NEG_LINETO_INDEX] = 1
 	//orderCapa.OrderSupport[TS_NEG_MEMBLT_INDEX] = 1
 	//orderCapa.OrderSupport[TS_NEG_MEM3BLT_INDEX] = 1

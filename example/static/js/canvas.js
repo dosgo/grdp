@@ -87,7 +87,6 @@
         // 2. 标记是否已经请求了下一帧
         this.isRAFScheduled = false;
 		this.render = this.render.bind(this);
-		this.count=1;
 	}
 	
 	Canvas.prototype = {
@@ -112,53 +111,12 @@
 			imageData.data.set(output.data);
 			this.ctx.putImageData(imageData, bitmap.destLeft, bitmap.destTop);
 
-			if(this.count>3000){
-				/*
-				const randomColor = getRandomColor();
-				this.ctx.strokeStyle = randomColor; // 红色边框
-				this.ctx.lineWidth = 2;       // 2像素粗
-				this.ctx.setLineDash([5, 5]); // 虚线
-
-				// 绘制目标矩形 (DestRect)
-				// 目标坐标：(X, Y)
-				// 目标尺寸：(Cx, Cy)
-				this.ctx.strokeRect(bitmap.destLeft, bitmap.destTop,output.width, output.height); 
-				*/
-			}
-			this.count++;
-
 		},
 		scrBltOrder:function(scrBltOrder){
 			if (scrBltOrder.Cx <= 0 || scrBltOrder.Cy <= 0) {
 				console.error('Invalid dimensions for ScrBltOrder');
 				return;
 			}
-			// 使用drawImage复制屏幕区域
-			/*
-			this.ctx.drawImage(
-				this.canvas,
-				scrBltOrder.Srcx, scrBltOrder.Srcy, scrBltOrder.Cx, scrBltOrder.Cy,
-				scrBltOrder.X, scrBltOrder.Y, scrBltOrder.Cx, scrBltOrder.Cy
-			);*/
-			
-
-
-			// 2. [调试代码] 添加边框，可视化目标区域 (DestRect)
-			/*
-			this.ctx.strokeStyle = 'red'; // 红色边框
-			this.ctx.lineWidth = 2;       // 2像素粗
-			this.ctx.setLineDash([5, 5]); // 虚线
-
-			// 绘制目标矩形 (DestRect)
-			// 目标坐标：(X, Y)
-			// 目标尺寸：(Cx, Cy)
-			this.ctx.strokeRect(scrBltOrder.X, scrBltOrder.Y, scrBltOrder.Cx,  scrBltOrder.Cy); 
-			*/
-			
-			// 绘制源矩形 (SrcRect) - 可选，用于对比
-		//	this.ctx.strokeStyle = 'blue';
-		//	this.ctx.setLineDash([2, 4]); 
-		//	this.ctx.strokeRect(scrBltOrder.Srcx, scrBltOrder.Srcy, scrBltOrder.Cx, scrBltOrder.Cy);
 			
 			const imageData = this.ctx.getImageData(
 				scrBltOrder.Srcx, scrBltOrder.Srcy, 

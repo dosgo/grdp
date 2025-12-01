@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/dosgo/grdp/client"
 	"github.com/dosgo/grdp/glog"
 	"github.com/dosgo/grdp/protocol/pdu"
 	"github.com/gorilla/websocket"
@@ -151,7 +152,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 	// 读取客户端消息
 	var recvMsg Message
-	var g *RdpClient
+	var g *client.Client
 	for {
 
 		err := conn.ReadJSON(&recvMsg)
@@ -168,8 +169,13 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			json.Unmarshal([]byte(recvMsg.Data), &info)
 			fmt.Println(r.RemoteAddr, "logon infos:", info)
 
-			g = NewRdpClient(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Width, info.Height, glog.INFO)
-			g.info = &info
+			conf := &client.Setting{
+				Width:    info.Width,
+				Height:   info.Height,
+				LogLevel: glog.INFO,
+			}
+			g = client.NewClient(fmt.Sprintf("%s:%s", info.Ip, info.Port), "", "", 0, conf)
+			g.SetLoginParam(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Domain+"//"+info.Username, info.Passwd)
 			err := g.Login()
 			if err != nil {
 				fmt.Println("Login:", err)
@@ -179,26 +185,58 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				})
 				return
 			}
-			g.pdu.On("error", func(e error) {
+			g.OnError(func(e error) {
 				fmt.Println("on error:", e)
 				//so.Emit("rdp-error", "{\"code\":1,\"message\":\""+e.Error()+"\"}")
 				conn.WriteJSON(Message{
 					Cmd:  "rdp-error",
 					Data: "{\"code\":1,\"message\":\"" + e.Error() + "\"}",
 				})
-				//wg.Done()
-			}).On("close", func() {
+			})
+			g.OnClose(func() {
 				err = errors.New("close")
 				fmt.Println("on close")
-			}).On("success", func() {
+			})
+			g.OnSuccess(func() {
 				fmt.Println("on success")
-			}).On("ready", func() {
+			})
+			g.OnReady(func() {
 				fmt.Println("on ready")
-			}).On("color", func(fastPathColorPdu *pdu.FastPathColorPdu) {
+			})
+			g.RdpOnBitmap(func(rectbangles []pdu.BitmapData) {
+				//glog.Info(time.Now(), "on update Bitmap:", len(rectangles))
+				bs := make([]client.Bitmap, 0, len(rectbangles))
 
-				fmt.Printf("color v:%+v\r\n", fastPathColorPdu)
+				for _, v := range rectbangles {
 
-			}).On("orders", func(orderPdus []pdu.OrderPdu) {
+					IsCompress := v.IsCompress()
+					data := v.BitmapDataStream
+
+					glog.Debug(IsCompress, v.BitsPerPixel)
+					b := client.Bitmap{int(v.DestLeft), int(v.DestTop), int(v.DestRight), int(v.DestBottom),
+						int(v.Width), int(v.Height), int(v.BitsPerPixel), IsCompress, data}
+					//so.Emit("rdp-bitmap", []Bitmap{b})
+					/*
+						data, err := json.Marshal([]Bitmap{b})
+						if err == nil {
+							conn.WriteJSON(Message{
+								Cmd:  "rdp-bitmap",
+								Data: string(data),
+							})
+					*/
+					bs = append(bs, b)
+				}
+
+				//so.Emit("rdp-bitmap", bs)
+				data, err := json.Marshal(bs)
+				if err == nil {
+					conn.WriteJSON(Message{
+						Cmd:  "rdp-bitmap",
+						Data: string(data),
+					})
+				}
+			})
+			g.RdpOnOrder(func(orderPdus []pdu.OrderPdu) {
 				isSend := false
 				for _, v := range orderPdus {
 					if v.Type == 0 {
@@ -220,37 +258,8 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 						})
 					}
 				}
-
-			}).On("bitmap", func(rectangles []pdu.BitmapData) {
-				//glog.Info(time.Now(), "on update Bitmap:", len(rectangles))
-				bs := make([]Bitmap, 0, len(rectangles))
-				for _, v := range rectangles {
-					IsCompress := v.IsCompress()
-					data := v.BitmapDataStream
-
-					glog.Debug(IsCompress, v.BitsPerPixel)
-					b := Bitmap{int(v.DestLeft), int(v.DestTop), int(v.DestRight), int(v.DestBottom),
-						int(v.Width), int(v.Height), int(v.BitsPerPixel), IsCompress, data}
-					//so.Emit("rdp-bitmap", []Bitmap{b})
-					/*
-						data, err := json.Marshal([]Bitmap{b})
-						if err == nil {
-							conn.WriteJSON(Message{
-								Cmd:  "rdp-bitmap",
-								Data: string(data),
-							})
-						}*/
-					bs = append(bs, b)
-				}
-				//so.Emit("rdp-bitmap", bs)
-				data, err := json.Marshal(bs)
-				if err == nil {
-					conn.WriteJSON(Message{
-						Cmd:  "rdp-bitmap",
-						Data: string(data),
-					})
-				}
 			})
+
 		}
 
 		// 获取连接
@@ -280,7 +289,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			p.XPos = info.X
 			p.YPos = info.Y
 			if g != nil {
-				g.pdu.SendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
+				g.RdpSendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
 			}
 		}
 		//keyboard
@@ -298,7 +307,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				p.KeyboardFlags |= pdu.KBDFLAGS_RELEASE
 			}
 			if g != nil {
-				g.pdu.SendInputEvents(pdu.INPUT_EVENT_SCANCODE, []pdu.InputEventsInterface{p})
+				g.RdpSendInputEvents(pdu.INPUT_EVENT_SCANCODE, []pdu.InputEventsInterface{p})
 			}
 		}
 		//wheel
@@ -321,7 +330,8 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			p.XPos = info.X
 			p.YPos = info.Y
 			if g != nil {
-				g.pdu.SendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
+				g.RdpSendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
+
 			}
 
 		}
@@ -329,7 +339,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	}
 	if g != nil {
 
-		g.tpkt.Close()
+		g.Close()
 
 	}
 }

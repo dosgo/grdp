@@ -71,8 +71,22 @@ func NewClient(host, user, passwd string, t int, s *Setting) *Client {
 	return c
 }
 
+func (c *Client) SetLoginParam(host, user, passwd string) {
+	if len(host) > 0 {
+		c.host = host
+	}
+	if len(user) > 0 {
+		c.user = user
+	}
+	if len(passwd) > 0 {
+		c.passwd = passwd
+	}
+}
 func (c *Client) Login() error {
 	return c.ctl.Login(c.host, c.user, c.passwd, c.setting.Width, c.setting.Height)
+}
+func (c *Client) Close() {
+	c.ctl.Close()
 }
 
 func (c *Client) KeyUp(sc int, name string) {
@@ -129,11 +143,26 @@ func (c *Client) OnBitmap(f func([]Bitmap)) {
 					int(v.Width), int(v.Height), Bpp(v.BitsPerPixel), IsCompress, stream}
 				bs = append(bs, b)
 			}
+
 		}
 		f(bs)
 	}
 
 	c.ctl.On("bitmap", f1)
+}
+
+func (c *Client) RdpOnBitmap(f func([]pdu.BitmapData)) {
+	c.ctl.On("bitmap", f)
+}
+
+func (c *Client) RdpOnOrder(f func([]pdu.OrderPdu)) {
+	c.ctl.On("orders", f)
+}
+
+func (c *Client) RdpSendInputEvents(msgType uint16, events []pdu.InputEventsInterface) {
+	if rdpClient, ok := c.ctl.(*RdpClient); ok {
+		rdpClient.pdu.SendInputEvents(msgType, events)
+	}
 }
 
 type Bitmap struct {
