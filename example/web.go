@@ -12,6 +12,7 @@ import (
 
 	"github.com/dosgo/grdp/glog"
 	"github.com/dosgo/grdp/protocol/pdu"
+	"github.com/dosgo/grdp/static"
 	socketio "github.com/googollee/go-socket.io"
 	"github.com/gorilla/websocket"
 )
@@ -173,11 +174,7 @@ func socketIO() {
 
 	http.Handle("/socket.io/", server)
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.Handle("/css/", http.FileServer(http.Dir("static")))
-	http.Handle("/js/", http.FileServer(http.Dir("static")))
-	http.Handle("/img/", http.FileServer(http.Dir("static")))
-	http.HandleFunc("/", showPreview)
+	http.Handle("/", http.FileServer(http.FS(static.StaticFiles)))
 
 	log.Println("Serving at localhost:8088...")
 	log.Fatal(http.ListenAndServe(":8088", nil))
@@ -191,11 +188,7 @@ func wsIO() {
 
 	http.HandleFunc("/ws", handleConnections)
 
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.Handle("/css/", http.FileServer(http.Dir("static")))
-	http.Handle("/js/", http.FileServer(http.Dir("static")))
-	http.Handle("/img/", http.FileServer(http.Dir("static")))
-	http.HandleFunc("/", showPreview)
+	http.Handle("/", http.FileServer(http.FS(static.StaticFiles)))
 
 	log.Println("Serving at localhost:8088...")
 	log.Fatal(http.ListenAndServe(":8088", nil))

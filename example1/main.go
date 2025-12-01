@@ -6,7 +6,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +15,7 @@ import (
 	"github.com/dosgo/grdp/client"
 	"github.com/dosgo/grdp/glog"
 	"github.com/dosgo/grdp/protocol/pdu"
+	"github.com/dosgo/grdp/static"
 	"github.com/gorilla/websocket"
 )
 
@@ -84,26 +84,10 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true },
 }
 
-func showPreview(w http.ResponseWriter, r *http.Request) {
-	t, err := template.ParseFiles("static/html/index.html")
-	if err != nil {
-		w.Write([]byte(err.Error() + "\n"))
-		return
-	}
-	w.Header().Add("Content-Type", "text/html")
-	t.Execute(w, nil)
-
-}
-
 func wsIO() {
 
 	http.HandleFunc("/ws", handleConnections)
-
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
-	http.Handle("/css/", http.FileServer(http.Dir("static")))
-	http.Handle("/js/", http.FileServer(http.Dir("static")))
-	http.Handle("/img/", http.FileServer(http.Dir("static")))
-	http.HandleFunc("/", showPreview)
+	http.Handle("/", http.FileServer(http.FS(static.StaticFiles)))
 
 	log.Println("Serving at localhost:8088...")
 	log.Fatal(http.ListenAndServe(":8088", nil))
