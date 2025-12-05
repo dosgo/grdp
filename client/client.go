@@ -172,6 +172,14 @@ func (c *Client) RdpChannelsRegister(t plugin.ChannelTransport) {
 	}
 }
 
+func (c *Client) VncBitmap(f func(*rfb.BitRect)) {
+	if vncClient, ok := c.ctl.(*VncClient); ok {
+		vncClient.On("bitmap", func(br *rfb.BitRect) {
+			f(br)
+		})
+	}
+}
+
 type Bitmap struct {
 	DestLeft     int    `json:"destLeft"`
 	DestTop      int    `json:"destTop"`

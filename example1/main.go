@@ -141,7 +141,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 		err := conn.ReadJSON(&recvMsg)
 		if err != nil {
-
 			break
 		}
 
@@ -190,28 +189,16 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			g.RdpOnBitmap(func(rectbangles []pdu.BitmapData) {
 				//glog.Info(time.Now(), "on update Bitmap:", len(rectangles))
 				bs := make([]client.Bitmap, 0, len(rectbangles))
-
 				for _, v := range rectbangles {
-
 					IsCompress := v.IsCompress()
 					data := v.BitmapDataStream
-
 					glog.Debug(IsCompress, v.BitsPerPixel)
 					b := client.Bitmap{int(v.DestLeft), int(v.DestTop), int(v.DestRight), int(v.DestBottom),
 						int(v.Width), int(v.Height), int(v.BitsPerPixel), IsCompress, data}
-					//so.Emit("rdp-bitmap", []Bitmap{b})
-					/*
-						data, err := json.Marshal([]Bitmap{b})
-						if err == nil {
-							conn.WriteJSON(Message{
-								Cmd:  "rdp-bitmap",
-								Data: string(data),
-							})
-					*/
+
 					bs = append(bs, b)
 				}
 
-				//so.Emit("rdp-bitmap", bs)
 				data, err := json.Marshal(bs)
 				if err == nil {
 					conn.WriteJSON(Message{
@@ -227,9 +214,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 						isSend = true
 					}
 					if v.Primary != nil {
-
-						//	fmt.Printf("orders  v Primary type:%d data:%+v\r\n", v.Primary.Data.Type(), v.Primary.Data)
-
+						//fmt.Printf("orders  v Primary type:%d data:%+v\r\n", v.Primary.Data.Type(), v.Primary.Data)
 					}
 
 				}
@@ -248,11 +233,8 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 		// 获取连接
 		if recvMsg.Cmd == "mouse" {
-
 			var info MouseInfo
-
 			json.Unmarshal([]byte(recvMsg.Data), &info)
-
 			glog.Info("mouse", info.X, ":", info.Y, ":", info.Button, ":", info.IsPressed)
 			p := &pdu.PointerEvent{}
 			if info.IsPressed {
@@ -284,7 +266,6 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			glog.Info("scancode:", "button:", info.Button, "isPressed:", info.IsPressed)
-
 			p := &pdu.ScancodeKeyEvent{}
 			p.KeyCode = info.Button
 			if !info.IsPressed {
@@ -305,11 +286,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			} else {
 				p.PointerFlags |= pdu.PTRFLAGS_WHEEL
 			}
-
 			if info.IsNegative {
 				p.PointerFlags |= pdu.PTRFLAGS_WHEEL_NEGATIVE
 			}
-
 			p.PointerFlags |= info.Step & pdu.WheelRotationMask
 			p.XPos = info.X
 			p.YPos = info.Y
@@ -317,13 +296,9 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 				g.RdpSendInputEvents(pdu.INPUT_EVENT_MOUSE, []pdu.InputEventsInterface{p})
 
 			}
-
 		}
-
 	}
 	if g != nil {
-
 		g.Close()
-
 	}
 }

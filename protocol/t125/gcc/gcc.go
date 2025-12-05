@@ -16,7 +16,7 @@ import (
 	"github.com/dosgo/grdp/glog"
 	"github.com/dosgo/grdp/protocol/t125/per"
 	"github.com/lunixbochs/struc"
-	"github.com/zmap/zcrypto/cryptobyte"
+	"golang.org/x/crypto/cryptobyte"
 )
 
 var t124_02_98_oid = []byte{0, 0, 20, 124, 0, 1}

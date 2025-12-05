@@ -2,22 +2,17 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"image"
 	"image/color"
 	"image/draw"
 	"runtime"
-	"strconv"
 	"time"
 
 	"github.com/google/gxui/drivers/gl"
 
 	"github.com/dosgo/grdp/client"
 	"github.com/dosgo/grdp/core"
-	"github.com/dosgo/grdp/glog"
-	"github.com/dosgo/grdp/plugin/cliprdr"
-	"github.com/dosgo/grdp/protocol/pdu"
 	"github.com/google/gxui"
 	"github.com/google/gxui/samples/flags"
 	"github.com/google/gxui/themes/light"
@@ -89,7 +84,7 @@ func appMain(driver gxui.Driver) {
 	//ip.SetText("192.168.18.100:5902")
 	ip.SetText("192.168.0.132:3389")
 	user.SetText("administrator")
-	passwd.SetText("Jhadmin123")
+	passwd.SetText("")
 	//passwd.SetText("wren")
 
 	bok := theme.CreateButton()
@@ -181,7 +176,7 @@ func ToRGBA(pixel int, i int, data []byte) (r, g, b, a uint8) {
 	return
 }
 
-func paint_bitmap(bs []Bitmap) {
+func paint_bitmap(bs []client.Bitmap) {
 	var (
 		pixel      int
 		i          int
@@ -211,9 +206,9 @@ func paint_bitmap(bs []Bitmap) {
 
 }
 
-var BitmapCH chan []Bitmap
+var BitmapCH chan []client.Bitmap
 
-func ui_paint_bitmap(bs []Bitmap) {
+func ui_paint_bitmap(bs []client.Bitmap) {
 	BitmapCH <- bs
 }
 
@@ -231,46 +226,6 @@ func uiClient(info *Info) (error, Control) {
 	}
 
 	return err, g
-}
-
-type Bitmap struct {
-	DestLeft     int    `json:"destLeft"`
-	DestTop      int    `json:"destTop"`
-	DestRight    int    `json:"destRight"`
-	DestBottom   int    `json:"destBottom"`
-	Width        int    `json:"width"`
-	Height       int    `json:"height"`
-	BitsPerPixel int    `json:"bitsPerPixel"`
-	IsCompress   bool   `json:"isCompress"`
-	Data         []byte `json:"data"`
-}
-
-func Bpp(BitsPerPixel uint16) (pixel int) {
-	switch BitsPerPixel {
-	case 15:
-		pixel = 1
-
-	case 16:
-		pixel = 2
-
-	case 24:
-		pixel = 3
-
-	case 32:
-		pixel = 4
-
-	default:
-		glog.Error("invalid bitmap data format")
-	}
-	return
-}
-
-func Hex2Dec(val string) int {
-	n, err := strconv.ParseUint(val, 16, 32)
-	if err != nil {
-		fmt.Println(err)
-	}
-	return int(n)
 }
 
 type Control interface {
@@ -397,61 +352,4 @@ func transKey(in gxui.KeyboardKey) int {
 		return v
 	}
 	return 0
-}
-
-func uiRdp(info *Info) (error, *client.Client) {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-
-	BitmapCH = make(chan []Bitmap, 500)
-	conf := &client.Setting{
-		Width:    info.Width,
-		Height:   info.Height,
-		LogLevel: glog.INFO,
-	}
-	g := client.NewClient(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Username, info.Passwd, 0, conf)
-	g.SetLoginParam(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Username, info.Passwd)
-
-	err := g.Login()
-	if err != nil {
-		glog.Error("Login:", err)
-		return err, nil
-	}
-	cc := cliprdr.NewCliprdrClient()
-	g.RdpChannelsRegister(cc)
-
-	g.OnError(func(e error) {
-		glog.Info("on error:", e)
-	})
-
-	g.OnClose(func() {
-		err = errors.New("close")
-		glog.Info("on close")
-	})
-
-	g.OnSuccess(func() {
-		glog.Info("on success")
-	})
-	g.OnReady(func() {
-		glog.Info("on ready")
-	})
-	g.RdpOnBitmap(func(rectangles []pdu.BitmapData) {
-		glog.Info("Update Bitmap:", len(rectangles))
-		bs := make([]Bitmap, 0, 50)
-		for _, v := range rectangles {
-			IsCompress := v.IsCompress()
-			data := v.BitmapDataStream
-			if IsCompress {
-				//data = client.BitmapDecompress(&v)
-				data = core.Decompress(v.BitmapDataStream, int(v.Width), int(v.Height), Bpp(v.BitsPerPixel))
-				IsCompress = false
-			}
-
-			b := Bitmap{int(v.DestLeft), int(v.DestTop), int(v.DestRight), int(v.DestBottom),
-				int(v.Width), int(v.Height), Bpp(v.BitsPerPixel), IsCompress, data}
-			bs = append(bs, b)
-		}
-		ui_paint_bitmap(bs)
-	})
-
-	return nil, g
 }

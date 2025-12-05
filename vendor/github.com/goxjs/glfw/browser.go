@@ -104,6 +104,17 @@ func CreateWindow(_, _ int, title string, monitor *Monitor, share *Window) (*Win
 		}
 	}
 
+	dom.GetWindow().AddEventListener("focus", false, func(dom.Event) {
+		if w.focusCallback != nil {
+			w.focusCallback(w, true)
+		}
+	})
+	dom.GetWindow().AddEventListener("blur", false, func(dom.Event) {
+		if w.focusCallback != nil {
+			w.focusCallback(w, false)
+		}
+	})
+
 	dom.GetWindow().AddEventListener("resize", false, func(event dom.Event) {
 		// HACK: Go fullscreen?
 		width := dom.GetWindow().InnerWidth()
@@ -281,6 +292,12 @@ func CreateWindow(_, _ int, title string, monitor *Monitor, share *Window) (*Win
 	document.AddEventListener("touchmove", false, touchHandler)
 	document.AddEventListener("touchend", false, touchHandler)
 
+	document.AddEventListener("beforeunload", false, func(dom.Event) {
+		if w.closeCallback != nil {
+			w.closeCallback(w)
+		}
+	})
+
 	// Request first animation frame.
 	js.Global.Call("requestAnimationFrame", animationFrame)
 
@@ -317,6 +334,8 @@ type Window struct {
 	scrollCallback          ScrollCallback
 	framebufferSizeCallback FramebufferSizeCallback
 	sizeCallback            SizeCallback
+	focusCallback           FocusCallback
+	closeCallback           CloseCallback
 
 	touches *js.Object // Hacky mouse-emulation-via-touch.
 }
@@ -838,10 +857,9 @@ func (w *Window) Destroy() {
 type CloseCallback func(w *Window)
 
 func (w *Window) SetCloseCallback(cbfun CloseCallback) (previous CloseCallback) {
-	// TODO: Implement.
-
-	// TODO: Handle previous.
-	return nil
+	previous = w.closeCallback
+	w.closeCallback = cbfun
+	return previous
 }
 
 type RefreshCallback func(w *Window)
@@ -892,10 +910,9 @@ func (w *Window) SetPosCallback(cbfun PosCallback) (previous PosCallback) {
 type FocusCallback func(w *Window, focused bool)
 
 func (w *Window) SetFocusCallback(cbfun FocusCallback) (previous FocusCallback) {
-	// TODO: Implement.
-
-	// TODO: Handle previous.
-	return nil
+	previous = w.focusCallback
+	w.focusCallback = cbfun
+	return previous
 }
 
 type IconifyCallback func(w *Window, iconified bool)
