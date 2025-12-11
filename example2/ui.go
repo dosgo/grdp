@@ -267,16 +267,26 @@ func setupKeyboard(w fyne.Window) {
 			if gc == nil {
 				return
 			}
-			//key1 := transKey(key.Name)
+			key1 := transKey(key.Name)
 			//key.Physical.ScanCode
-			gc.KeyDown(key.Physical.ScanCode, "")
+			fmt.Printf("key.Name:%s\r\n", key.Name)
+			if key1 > 0 {
+				gc.KeyDown(key1, "")
+			} else {
+				gc.KeyDown(key.Physical.ScanCode, "")
+			}
 		})
 		deskCanvas.SetOnKeyUp(func(key *fyne.KeyEvent) {
 			if gc == nil {
 				return
 			}
-			//key1 := transKey(key.Name)
-			gc.KeyUp(key.Physical.ScanCode, "")
+			key1 := transKey(key.Name)
+			if key1 > 0 {
+				gc.KeyUp(key1, "")
+			} else {
+				//key1 := transKey(key.Name)
+				gc.KeyUp(key.Physical.ScanCode, "")
+			}
 		})
 	}
 
@@ -424,4 +434,119 @@ func forceMaximizeWindows(w fyne.Window) error {
 	}
 
 	return nil
+}
+
+var KeyMap = map[fyne.KeyName]int{
+
+	fyne.KeyEscape:       0x0001,
+	fyne.Key1:            0x0002,
+	fyne.Key2:            0x0003,
+	fyne.Key3:            0x0004,
+	fyne.Key4:            0x0005,
+	fyne.Key5:            0x0006,
+	fyne.Key6:            0x0007,
+	fyne.Key7:            0x0008,
+	fyne.Key8:            0x0009,
+	fyne.Key9:            0x000A,
+	fyne.Key0:            0x000B,
+	fyne.KeyMinus:        0x000C,
+	fyne.KeyEqual:        0x000D,
+	fyne.KeyBackspace:    0x000E,
+	fyne.KeyTab:          0x000F,
+	fyne.KeyQ:            0x0010,
+	fyne.KeyW:            0x0011,
+	fyne.KeyE:            0x0012,
+	fyne.KeyR:            0x0013,
+	fyne.KeyT:            0x0014,
+	fyne.KeyY:            0x0015,
+	fyne.KeyU:            0x0016,
+	fyne.KeyI:            0x0017,
+	fyne.KeyO:            0x0018,
+	fyne.KeyP:            0x0019,
+	fyne.KeyLeftBracket:  0x001A,
+	fyne.KeyRightBracket: 0x001B,
+	fyne.KeyEnter:        0x001C,
+	//	fyne.KeyLeftControl:  0x001D,
+	fyne.KeyA:         0x001E,
+	fyne.KeyS:         0x001F,
+	fyne.KeyD:         0x0020,
+	fyne.KeyF:         0x0021,
+	fyne.KeyG:         0x0022,
+	fyne.KeyH:         0x0023,
+	fyne.KeyJ:         0x0024,
+	fyne.KeyK:         0x0025,
+	fyne.KeyL:         0x0026,
+	fyne.KeySemicolon: 0x0027,
+	//"Quote":              0x0028,
+	//"Backquote":          0x0029,
+	//fyne.KeyLeftShift:  0x002A,
+	fyne.KeyBackslash: 0x002B,
+	fyne.KeyZ:         0x002C,
+	fyne.KeyX:         0x002D,
+	fyne.KeyC:         0x002E,
+	fyne.KeyV:         0x002F,
+	fyne.KeyB:         0x0030,
+	fyne.KeyN:         0x0031,
+	fyne.KeyM:         0x0032,
+	fyne.KeyComma:     0x0033,
+	fyne.KeyPeriod:    0x0034,
+	fyne.KeySlash:     0x0035,
+	//fyne.KeyRightShift: 0x0036,
+	//fyne.KeyKpMultiply: 0x0037,
+	//fyne.KeyLeftAlt:    0x0038,
+	fyne.KeySpace: 0x0039,
+	//fyne.KeyCapsLock:   0x003A,
+	fyne.KeyF1:  0x003B,
+	fyne.KeyF2:  0x003C,
+	fyne.KeyF3:  0x003D,
+	fyne.KeyF4:  0x003E,
+	fyne.KeyF5:  0x003F,
+	fyne.KeyF6:  0x0040,
+	fyne.KeyF7:  0x0041,
+	fyne.KeyF8:  0x0042,
+	fyne.KeyF9:  0x0043,
+	fyne.KeyF10: 0x0044,
+	//fyne.KeyPause:        0x0045,
+	//fyne.KeyScrollLock:   0x0046,
+	//fyne.KeyKp7:          0x0047,
+	//fyne.KeyKp8:          0x0048,
+	//fyne.KeyKp9:          0x0049,
+	//	fyne.KeyKpSubtract:   0x004A,
+	//	fyne.KeyKp4:          0x004B,
+	//	fyne.KeyKp5:          0x004C,
+	//	fyne.KeyKp6:          0x004D,
+	//	fyne.KeyKpAdd:        0x004E,
+	//	fyne.KeyKp1:          0x004F,
+	//	fyne.KeyKp2:          0x0050,
+	//fyne.KeyKp3:          0x0051,
+	//	fyne.KeyKp0:          0x0052,
+	//fyne.KeyKpDecimal:    0x0053,
+	fyne.KeyF11: 0x0057,
+	fyne.KeyF12: 0x0058,
+	//fyne.KeyKpEqual:      0x0059,
+	//fyne.KeyKpEnter:      0xE01C,
+	//fyne.KeyRightControl: 0xE01D,
+	//	fyne.KeyKpDivide:     0xE035,
+	//fyne.KeyPrintScreen:  0xE037,
+	//fyne.KeyRightAlt:     0xE038,
+	//fyne.KeyNumLock:      0xE045,
+	//fyne.KeyPause:        0xE046,
+	fyne.KeyHome:     0xE047,
+	fyne.KeyUp:       0xE048,
+	fyne.KeyPageUp:   0xE049,
+	fyne.KeyLeft:     0xE04B,
+	fyne.KeyRight:    0xE04D,
+	fyne.KeyEnd:      0xE04F,
+	fyne.KeyDown:     0xE050,
+	fyne.KeyPageDown: 0xE051,
+	fyne.KeyInsert:   0xE052,
+	fyne.KeyDelete:   0xE053,
+	//fyne.KeyMenu:         0xE05D,
+}
+
+func transKey(in fyne.KeyName) int {
+	if v, ok := KeyMap[in]; ok {
+		return v
+	}
+	return 0
 }
