@@ -3,6 +3,7 @@ package cliprdr
 import (
 	"bytes"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"strings"
 	"unicode/utf16"
@@ -331,7 +332,6 @@ func NewCliprdrClient() *CliprdrClient {
 }
 
 func (c *CliprdrClient) Send(s []byte) (int, error) {
-	glog.Debug("len:", len(s), "data:", hex.EncodeToString(s))
 	name, _ := c.GetType()
 	return c.w.SendToChannel(name, s)
 }
@@ -350,7 +350,7 @@ func (c *CliprdrClient) Process(s []byte) {
 	flag, _ := core.ReadUint16LE(r)
 	length, _ := core.ReadUInt32LE(r)
 	glog.Debugf("cliprdr: type=0x%x flag=%d length=%d, all=%d", msgType, flag, length, r.Len())
-
+	fmt.Printf("cliprdr: type=0x%x flag=%d length=%d, all=%d\r\n", msgType, flag, length, r.Len())
 	b, _ := core.ReadBytes(int(length), r)
 
 	switch msgType {
@@ -424,7 +424,7 @@ func (c *CliprdrClient) processMonitorReady(b []byte) {
 	c.sendClientCapabilitiesPDU()
 
 	//Temporary Directory PDU
-	//c.sendTemporaryDirectoryPDU()
+	c.sendTemporaryDirectoryPDU()
 
 	//Format List PDU
 	c.sendFormatListPDU()
@@ -610,6 +610,7 @@ func (c *CliprdrClient) sendTemporaryDirectoryPDU() {
 	core.WriteBytes(t.SzTempDir, buff)
 	c.Send(buff.Bytes())
 }
+
 func (c *CliprdrClient) sendFormatListPDU() {
 	glog.Info("Send Format List PDU")
 	var f CliprdrFormatList
@@ -623,16 +624,42 @@ func (c *CliprdrClient) sendFormatListPDU() {
 	b := &bytes.Buffer{}
 	for _, v := range f.Formats {
 		core.WriteUInt32LE(v.FormatId, b)
-		if v.FormatName == "" {
-			core.WriteUInt16LE(0, b)
+		if v.FormatId < 0xC000 {
+			v.FormatName = ""
+		}
+		if c.useLongFormatNames {
+			if v.FormatName == "" {
+				//core.WriteUInt16LE(0, b)
+				b.Write([]byte{0, 0})
+			} else {
+				n := core.UnicodeEncode(v.FormatName)
+				core.WriteBytes(n, b)
+				b.Write([]byte{0, 0})
+			}
 		} else {
-			n := core.UnicodeEncode(v.FormatName)
-			core.WriteBytes(n, b)
-			b.Write([]byte{0, 0})
+			pad32 := make([]byte, 32)
+			if v.FormatName == "" {
+				b.Write(pad32)
+			} else {
+				// 短格式名称通常是 ASCII，但也可能是 Unicode 截断
+				// 为了兼容性，这里尝试写入 Unicode 并截断/填充到 32 字节
+				n := core.UnicodeEncode(v.FormatName)
+				if len(n) > 32 {
+					b.Write(n[:32])
+				} else {
+					b.Write(n)
+					b.Write(pad32[:32-len(n)])
+				}
+			}
 		}
 	}
-
-	header := NewCliprdrPDUHeader(CB_FORMAT_LIST, 0, uint32(b.Len()))
+	var flags uint16 = 0
+	if !c.useLongFormatNames {
+		// MS-RDPECLIP: This flag MUST be set when the format list PDU is sent
+		// by a client that does not support long format names.
+		flags |= CB_ASCII_NAMES // 0x0004
+	}
+	header := NewCliprdrPDUHeader(CB_FORMAT_LIST, flags, uint32(b.Len()))
 
 	buff := &bytes.Buffer{}
 	buff.Write(header.serialize())

@@ -169,6 +169,7 @@ func (c *Client) RdpSendInputEvents(msgType uint16, events []pdu.InputEventsInte
 func (c *Client) RdpChannelsRegister(t plugin.ChannelTransport) {
 	if rdpClient, ok := c.ctl.(*RdpClient); ok {
 		rdpClient.channels.Register(t)
+		rdpClient.mcs.SetClientCliprdr()
 	}
 }
 

@@ -19,7 +19,7 @@ func uiRdp(info *Info) (error, *client.Client) {
 	conf := &client.Setting{
 		Width:    info.Width,
 		Height:   info.Height,
-		LogLevel: glog.INFO,
+		LogLevel: glog.DEBUG,
 	}
 	g := client.NewClient(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Username, info.Passwd, 0, conf)
 	g.SetLoginParam(fmt.Sprintf("%s:%s", info.Ip, info.Port), info.Username, info.Passwd)

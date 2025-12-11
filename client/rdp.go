@@ -72,7 +72,7 @@ func (c *RdpClient) Login(host, user, pwd string, width, height int) error {
 	c.channels.SetChannelSender(c.sec)
 
 	//c.x224.SetRequestedProtocol(x224.PROTOCOL_RDP)
-	//c.x224.SetRequestedProtocol(x224.PROTOCOL_SSL)
+	//	c.x224.SetRequestedProtocol(x224.PROTOCOL_SSL)
 
 	err = c.x224.Connect()
 	if err != nil {
