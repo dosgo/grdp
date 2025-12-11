@@ -82,11 +82,11 @@ func appMain(driver gxui.Driver) {
 	user.SetDesiredWidth(width / 4)
 	passwd.SetDesiredWidth(width / 4)
 	//ip.SetText("192.168.18.100:5902")
-	ip.SetText("192.168.0.132:3389")
-	user.SetText("administrator")
-	passwd.SetText("")
-	//passwd.SetText("wren")
 
+	currentConfig := core.LoadConfig()
+	ip.SetText(currentConfig.IP)
+	user.SetText(currentConfig.Username)
+	passwd.SetText(currentConfig.Password)
 	bok := theme.CreateButton()
 	bok.SetText("OK")
 	bok.OnClick(func(e gxui.MouseEvent) {
@@ -102,6 +102,11 @@ func appMain(driver gxui.Driver) {
 			fmt.Println(err.Error())
 			return
 		}
+		core.SaveConfig(core.AppConfig{
+			IP:       ip.Text(),
+			Username: user.Text(),
+			Password: passwd.Text(),
+		})
 		layout.SetVisible(false)
 		layoutImg.SetVisible(true)
 		ip.GainedFocus()
