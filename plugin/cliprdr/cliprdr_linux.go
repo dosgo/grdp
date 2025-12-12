@@ -1,10 +1,9 @@
-// cliprdr_windows.go
+// cliprdr_linux.go
 package cliprdr
 
 import (
-	"github.com/shirou/w32"
 
-	"github.com/tomatome/win"
+
 )
 
 const (
@@ -50,7 +49,6 @@ const (
 	CF_MAX          = 18
 )
 const (
-	WM_CLIPRDR_MESSAGE = (w32.WM_USER + 156)
 	OLE_SETCLIPBOARD   = 1
 )
 
@@ -91,7 +89,7 @@ func EmptyClipboard() bool {
 func RegisterClipboardFormat(format string) uint32 {
 	return 0
 }
-func IsClipboardOwner(h win.HWND) bool {
+func IsClipboardOwner(h int) bool {
 	return false
 }
 
@@ -136,7 +134,7 @@ func GetFormatList(hwnd uintptr) []CliprdrFormat {
 	return list
 }
 
-func GlobalSize(hMem uintptr) win.SIZE_T {
+func GlobalSize(hMem uintptr) int {
 	return 0
 }
 func GlobalLock(hMem uintptr) uintptr {
