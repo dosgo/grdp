@@ -5,6 +5,7 @@ import (
 	"unsafe"
 )
 
+
 func CVAL(p *[]uint8) int {
 	a := int((*p)[0])
 	*p = (*p)[1:]

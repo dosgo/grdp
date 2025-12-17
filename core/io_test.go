@@ -1,5 +1,4 @@
 package core
-
 import (
 	"bytes"
 	"encoding/hex"
