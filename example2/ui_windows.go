@@ -1,6 +1,13 @@
 package main
 
-import 	"golang.org/x/sys/windows"
+import (
+	"fmt"
+	"runtime"
+
+	"fyne.io/fyne/v2"
+	"fyne.io/fyne/v2/driver"
+	"golang.org/x/sys/windows"
+)
 
 func forceMaximizeWindows(w fyne.Window) error {
 
