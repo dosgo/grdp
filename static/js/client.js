@@ -111,6 +111,7 @@
 		this.socket = null;
 		this.ws = null;
 		this.activeSession = false;
+		this.numLock=false;
 		this.install();
 	}
 	
@@ -270,6 +271,30 @@
 			window.addEventListener('keydown', function (e) {
 				if ( !self.activeSession) return;
 				console.log("keydown");
+
+				if(e.code!='NumLock'){
+					const isNumLockOn = e.getModifierState("NumLock");
+					if(isNumLockOn&&self.numLock==false){
+						if(self.ws){
+							self.ws.send(JSON.stringify({
+								cmd: "scancode",
+								data:JSON.stringify({
+										button : 0xE045, 
+										isPressed : true, 
+								}),
+							}));
+							self.ws.send(JSON.stringify({
+								cmd: "scancode",
+								data:JSON.stringify({
+									button : 0xE045, 
+									isPressed : false, 
+								}),
+							}));
+							self.numLock=true;
+						}
+					}
+				}
+
 				var keyCode=Mstsc.scancode(e);
 				if(keyCode==0){
 					return;
@@ -296,6 +321,8 @@
 				if(self.socket){
 					self.socket.emit('scancode', Mstsc.scancode(e), false);
 				}
+
+		
 				if(self.ws){
 					var param={
 						button :  Mstsc.scancode(e), 
